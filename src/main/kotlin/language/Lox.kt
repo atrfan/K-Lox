@@ -1,11 +1,11 @@
+package language
+
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.*
-import javax.print.DocFlavor.STRING
 
 object Lox {
     @JvmStatic
@@ -47,7 +47,7 @@ object Lox {
     @JvmStatic
     fun run(source: String) {
         val scanner = Scanner(source)
-        val tokens: List<String> = scanner.scanTokens()
+        val tokens: List<Token> = scanner.scanTokens()
         for (token in tokens) {
             println(token)
         }
