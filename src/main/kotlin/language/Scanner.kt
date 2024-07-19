@@ -32,8 +32,8 @@ class Scanner(val source: String) {
 
     fun scanTokens(): List<Token> {
         while (!isAtEnd()) {
-            start = current;
-            scanTokens()
+            start = current
+            scanToken()
         }
         tokens.add(Token(TokenType.EOF, "", null, line))
         return tokens
@@ -87,7 +87,7 @@ class Scanner(val source: String) {
         }
         val text = source.substring(start, current)
         val tokenType = keywords[text]?: TokenType.IDENTIFIER
-        addToken(TokenType.IDENTIFIER)
+        addToken(tokenType)
     }
 
     private fun isAlpha(c: Char): Boolean {

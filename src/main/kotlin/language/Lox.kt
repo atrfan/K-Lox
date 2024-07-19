@@ -7,6 +7,7 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Paths
 
+
 object Lox {
     @JvmStatic
     var hasError = false
@@ -24,14 +25,14 @@ object Lox {
         }
     }
 
-    @JvmStatic
+
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
         if(hasError) System.exit(65)
     }
 
-    @JvmStatic
+
     fun runPrompt() {
         val input = InputStreamReader(System.`in`)
         val reader = BufferedReader(input)
@@ -44,24 +45,39 @@ object Lox {
         }
     }
 
-    @JvmStatic
+
     fun run(source: String) {
         val scanner = Scanner(source)
         val tokens: List<Token> = scanner.scanTokens()
-        for (token in tokens) {
-            println(token)
-        }
+//        for (token in tokens) {
+//            println(token)
+//        }
+        val parser = Parser(tokens)
+        val expression = parser.parse()
+
+
+        // Stop if there was a syntax error.
+        if (hasError) return
+
+        println(AstPrinter().print(expression!!))
     }
 
-    @JvmStatic
+
     fun error(line:Int,message:String){
         report(line,"",message)
     }
 
-    @JvmStatic
+
     private fun report(line:Int,where:String,message:String){
         println("[line $line] Error $where: $message]")
     }
 
+    fun error(token: Token, message: String?) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message!!)
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message!!)
+        }
+    }
 
 }
