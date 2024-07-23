@@ -1,6 +1,8 @@
 package language
 
 /**
+ * 将tokens解析为expression
+ * 规则如下
 expression     → equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -9,8 +11,15 @@ factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
 */
-
 class Parser(val tokens: List<Token>) {
+    fun parse(): Expr? {
+        return try {
+            expression()
+        } catch (error: ParseError) {
+            null
+        }
+    }
+
     var current = 0
 
     class ParseError : RuntimeException()
@@ -142,7 +151,7 @@ class Parser(val tokens: List<Token>) {
             consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Expr.Grouping(expr)
         }
-        throw error(peek(), "Expect expression.");
+        throw error(peek(), "Expect expression.")
     }
 
     private fun consume(type: TokenType, message: String): Token? {
@@ -156,13 +165,7 @@ class Parser(val tokens: List<Token>) {
         return ParseError()
     }
 
-    fun parse(): Expr? {
-        return try {
-            expression()
-        } catch (error: ParseError) {
-            null
-        }
-    }
+
 
     private fun synchronize() {
         advance()

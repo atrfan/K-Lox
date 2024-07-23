@@ -10,13 +10,19 @@ import java.nio.file.Paths
 
 object Lox {
     @JvmStatic
-    var hasError = false
+    var hadError = false
+
+    @JvmStatic
+    var hadRuntimeError = false
+
+    @JvmStatic
+    private val interpreter = Interpreter()
 
     @Throws(IOException::class)
     @JvmStatic
     fun main(args: Array<String>) {
         if (args.size > 1) {
-            println("Usage: jlox [script]")
+            System.err.println("Usage: k-lox [script]")
             System.exit(64)
         } else if (args.size == 1) {
             runFile(args[0])
@@ -29,7 +35,8 @@ object Lox {
     fun runFile(path: String) {
         val bytes = Files.readAllBytes(Paths.get(path))
         run(String(bytes, Charset.defaultCharset()))
-        if(hasError) System.exit(65)
+        if (hadError) System.exit(65)
+        if (hadRuntimeError) System.exit(70)
     }
 
 
@@ -41,7 +48,7 @@ object Lox {
             print("> ")
             val line = reader.readLine() ?: break
             run(line)
-            hasError = false
+            hadError = false
         }
     }
 
@@ -57,19 +64,19 @@ object Lox {
 
 
         // Stop if there was a syntax error.
-        if (hasError) return
-
+        if (hadError) return
+        expression?.let { interpreter.interpret(it) };
         println(AstPrinter().print(expression!!))
     }
 
 
-    fun error(line:Int,message:String){
-        report(line,"",message)
+    fun error(line: Int, message: String) {
+        report(line, "", message)
     }
 
 
-    private fun report(line:Int,where:String,message:String){
-        println("[line $line] Error $where: $message]")
+    private fun report(line: Int, where: String, message: String) {
+        System.err.println("[line $line] Error $where: $message]")
     }
 
     fun error(token: Token, message: String?) {
@@ -79,5 +86,14 @@ object Lox {
             report(token.line, " at '" + token.lexeme + "'", message!!)
         }
     }
+
+    fun runtimeError(error: RuntimeError) {
+        System.err.println(
+            error.message +
+                    "\n[line " + error.token.line + "]"
+        );
+        hadRuntimeError = true;
+    }
+
 
 }
