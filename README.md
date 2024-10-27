@@ -1,2 +1,2 @@
 # K-Lox
-Lox language implementby Kotlin
+Lox language implement by Kotlin

@@ -2,12 +2,20 @@ package language
 
 import language.Lox.error
 
-
-class Scanner(val source: String) {
-    val tokens = ArrayList<Token>()
-    var start = 0       // 当前被扫描词素中的第一个字符
-    var current = 0     // 当前被扫描的字符
-    var line = 1        // current所在的源文件的第几行
+/**
+ *
+ * @property source String 一行代码
+ * @property tokens ArrayList<Token>
+ * @property start Int
+ * @property current Int
+ * @property line Int
+ * @constructor
+ */
+class Scanner(private val source: String) {
+    private val tokens = ArrayList<Token>()
+    private var start = 0       // 当前被扫描词素中的第一个字符
+    private var current = 0     // 当前被扫描的字符
+    private var line = 1        // current所在的源文件的第几行
 
     companion object{
         val keywords = HashMap<String, TokenType>().apply {
@@ -40,8 +48,8 @@ class Scanner(val source: String) {
     }
 
     fun scanToken() {
-        val c = advance()
-        when (c) {
+        when (val c = advance()) {
+            // 单字符长度的词素
             '(' -> addToken(TokenType.LEFT_PAREN)
             ')' -> addToken(TokenType.RIGHT_PAREN)
             '{' -> addToken(TokenType.LEFT_BRACE)
@@ -70,7 +78,6 @@ class Scanner(val source: String) {
             ' ', '\r', '\t' -> {}
             '\n' -> line++
             '"' -> string()
-            'o' -> if(peek() == 'r') {addToken(TokenType.OR)}
             else -> if(isDigit(c)){
                 number()
             } else if(isAlpha(c)){
@@ -85,10 +92,12 @@ class Scanner(val source: String) {
         while (isAlphaNumeric(peek())) {
             advance()
         }
+        // 在我们扫描到标识符之后，要检查是否与map中的某些项匹配。
         val text = source.substring(start, current)
         val tokenType = keywords[text]?: TokenType.IDENTIFIER
         addToken(tokenType)
     }
+
 
     private fun isAlpha(c: Char): Boolean {
         return (c in 'a'..'z') ||
@@ -122,7 +131,7 @@ class Scanner(val source: String) {
     private fun isAtEnd() = current >= source.length
 
     /**
-     * 查看当前扫描的字符的下一个字符是否==excepted
+     * 查看当前扫描的字符的下一个字符是否为 excepted
      * @param expected Char
      * @return Boolean
      */

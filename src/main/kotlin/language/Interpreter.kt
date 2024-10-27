@@ -1,14 +1,22 @@
 package language
 
-class Interpreter : Expr.Visitor<Any> {
+class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
-    fun interpret(expression: Expr) {
+    /**
+     * 连接到解释器，然后解释表达式，最后返回结果
+     */
+    fun interpret(statements: List<Stmt>) {
         try {
-            val value = evaluate(expression)
-            println(stringify(value))
+            for (statement in statements) {
+                execute(statement)
+            }
         } catch (e: RuntimeError) {
             Lox.runtimeError(e)
         }
+    }
+
+    private fun execute(statement: Stmt) {
+        statement.accept(this)
     }
 
     private fun stringify(any: Any?): String {
@@ -27,7 +35,7 @@ class Interpreter : Expr.Visitor<Any> {
 
 
     /**
-     * 分组——在表达式中显式使用括号时产生的语法树节点
+     * 分组——在表达式中显式使用括号时产生的语法树节点，有的编译器不显示的使用括号来单独定义树节点
      * @param expr Grouping
      * @return Any?
      */
@@ -161,6 +169,18 @@ class Interpreter : Expr.Visitor<Any> {
     private fun checkNumberOperands(operator: Token, left: Any?, right: Any?) {
         if ((left is Double) && (right is Boolean)) return
         throw RuntimeError(operator, "Operand must be a number.")
+    }
+
+
+    // 表达式不同，语句不会产生值，因此visit方法的返回类型是`Void`，而不是`Object`。
+
+    override fun visitExpressionStmt(stmt: Stmt.Expression) {
+        evaluate(stmt.expression)
+    }
+
+    override fun visitPrintStmt(stmt: Stmt.Print) {
+        val evaluate = evaluate(stmt.expression)
+        println(stringify(evaluate))
     }
 
 

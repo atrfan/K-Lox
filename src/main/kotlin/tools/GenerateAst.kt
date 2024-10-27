@@ -20,10 +20,18 @@ object GenerateAst {
                 "Unary    ->  operator:Token,  right:Expr"
             )
         )
+        defineAst(
+            // Stmt: Statement,语句
+            outputDir, "Stmt", listOf(
+                "Expression      ->  expression:Expr",
+                "Print      ->  expression:Expr"
+            )
+        )
+
     }
 
     private fun defineAst(outputDir: String, baseName: String, types: List<String>) {
-        val path = "$outputDir/$baseName.kt"
+        val path = "$outputDir\$baseName.kt"
         println(path)
         val writer = PrintWriter(path, "UTF-8")
         writer.println("package language;")
@@ -55,7 +63,7 @@ object GenerateAst {
 
         writer.println(") :${baseName}(){")
         writer.println("        override fun <R> accept(visitor: Visitor<R>): R {")
-        writer.println("            return visitor.visit${className}Expr(this)")
+        writer.println("            return visitor.visit${className}${baseName}(this)")
         writer.println("        }")
         writer.println("    }")
     }

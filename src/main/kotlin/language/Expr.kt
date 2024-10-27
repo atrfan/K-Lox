@@ -1,6 +1,7 @@
 package language
 
 // Expr是所有表达式类继承的基类。从`Binary`中可以看到，子类都嵌套在它的内部
+// 这里用到的设计模式是 访问者模式
 abstract class Expr {
     interface Visitor<R> {
         fun visitBinaryExpr(expr: Binary): R?
@@ -39,5 +40,4 @@ abstract class Expr {
     }
 
     abstract fun <R> accept(visitor: Visitor<R>): R?
-
 }

@@ -1,5 +1,8 @@
 package language
 
+/**
+ * 查看解析后的语法树
+ */
 class AstPrinter : Expr.Visitor<String> {
     fun print(expr: Expr): String? {
         return expr.accept(this)
@@ -26,5 +29,4 @@ class AstPrinter : Expr.Visitor<String> {
             }
             append(")")
         }.toString()
-
 }
