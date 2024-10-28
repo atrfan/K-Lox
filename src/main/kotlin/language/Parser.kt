@@ -18,17 +18,52 @@ class Parser(private val tokens: List<Token>) {
     // 这是一个简单的哨兵类，我们用它来帮助解析器摆脱错误。
     class ParseError : RuntimeException()
 
-    fun parse():List<Stmt>{
-        val statements:MutableList<Stmt> = mutableListOf()
-        while (!isAtEnd()){
-            statements.add(statement())
+    fun parse(): List<Stmt?> {
+        val statements: MutableList<Stmt?> = mutableListOf()
+        while (!isAtEnd()) {
+            statements.add(declaration())
         }
         return statements
     }
 
+    private fun declaration(): Stmt? {
+        try {
+            if (match(TokenType.VAR)) return varDeclaration()
+            return statement()
+        } catch (error: ParseError) {
+            synchronize()
+            return null
+        }
+    }
+
+    private fun varDeclaration(): Stmt {
+        val name = consume(TokenType.IDENTIFIER, "Expect variable name.")
+        var initializer: Expr? = null
+        if (match(TokenType.EQUAL)) {
+            initializer = expression()
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
+        return Stmt.Var(name!!, initializer!!)
+    }
+
 
     private fun expression(): Expr {
-        return equality()
+        return assignment()
+    }
+
+    private fun assignment(): Expr {
+        val expr = equality()
+        if (match(TokenType.EQUAL)) {
+            val equals = previous()
+            val value = assignment()
+            if (expr is Expr.Variable) {
+                val name = expr.name
+                return Expr.Assign(name, value)
+            }
+            throw error(equals, "Invalid assignment target.")
+
+        }
+        return expr
     }
 
     /**
@@ -36,9 +71,14 @@ class Parser(private val tokens: List<Token>) {
      * @return Stmt
      */
     private fun statement(): Stmt {
-        if(match(TokenType.PRINT)){
+        if (match(TokenType.PRINT)) {
             return printStatement()
         }
+
+        if(match(TokenType.LEFT_BRACE)){        // 通过块的前缀标记(在本例中是`{`)来检测块的开始
+            return Stmt.Block(block())
+        }
+
         return exceptionStatement()
     }
 
@@ -48,10 +88,25 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Print(value)
     }
 
-    private fun exceptionStatement(): Stmt{
+    private fun exceptionStatement(): Stmt {
         val value: Expr = expression()
         consume(TokenType.SEMICOLON, "Expect ';' after value.")
         return Stmt.Print(value)
+    }
+
+    /**
+     * 块语句;
+     * 我们先创建一个空列表，然后解析语句并将其放入列表中，直至遇到块的结尾（由`}`符号标识）。
+     * 注意，该循环还有一个明确的`isAtEnd()`检查。我们必须小心避免无限循环，即使在解析无效代码时也是如此。如果用户忘记了结尾的`}`，解析器需要保证不能被阻塞。
+     * @return List<Stmt?>
+     */
+    private fun block():List<Stmt?>{
+        val statements = mutableListOf<Stmt?>()
+        while(!check(TokenType.RIGHT_BRACE) && !isAtEnd()){
+            statements.add(declaration())
+        }
+        consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+        return statements
     }
 
 
@@ -164,6 +219,10 @@ class Parser(private val tokens: List<Token>) {
 
         if (match(TokenType.NUMBER, TokenType.STRING)) {
             return Expr.Literal(previous().literal)
+        }
+
+        if (match(TokenType.IDENTIFIER)) {
+            return Expr.Variable(previous())
         }
 
         if (match(TokenType.LEFT_PAREN)) {

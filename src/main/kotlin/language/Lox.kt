@@ -76,7 +76,7 @@ object Lox {
 
         // 如果有错误就不执行他
         if (hadError) return
-        statements?.let { interpreter.interpret(it) }
+        statements.let { interpreter.interpret(it) }
     }
 
 

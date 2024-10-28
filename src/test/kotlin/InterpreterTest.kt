@@ -12,12 +12,6 @@ class InterpreterTest {
         """.trimIndent()
         val tokens = Scanner(code).scanTokens()
         val parsers = Parser(tokens).parse()
-        if (parsers != null) {
-            println(interpreter.interpret(parsers))
-        }
-//        for(expr in expressions) {
-//            interpreter.interpret(expr)
-//        }
-
+        println(interpreter.interpret(parsers))
     }
 }

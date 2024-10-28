@@ -2,22 +2,26 @@ package language
 
 class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
+    private var environment = Environment()
+
     /**
      * 连接到解释器，然后解释表达式，最后返回结果
      */
-    fun interpret(statements: List<Stmt>) {
+    fun interpret(statements: List<Stmt?>) {
         try {
             for (statement in statements) {
-                execute(statement)
+                execute(statement!!)
             }
         } catch (e: RuntimeError) {
             Lox.runtimeError(e)
         }
     }
 
-    private fun execute(statement: Stmt) {
-        statement.accept(this)
+    private fun execute(statement: Stmt?) {
+        statement?.accept(this)
     }
+
+
 
     private fun stringify(any: Any?): String {
         if (any == null) return "nil"
@@ -70,6 +74,16 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
                 null
             }
         }
+    }
+
+    override fun visitVariableExpr(expr: Expr.Variable): Any? {
+        return environment.get(expr.name)
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): Any? {
+        val value = evaluate(expr.value)
+        environment.assign(expr.name, value)
+        return value
     }
 
     /**
@@ -171,6 +185,22 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         throw RuntimeError(operator, "Operand must be a number.")
     }
 
+    override fun visitBlockStmt(stmt: Stmt.Block){
+        executeBlock(stmt.statements,Environment(environment))
+    }
+
+    private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+        val previous = this.environment
+        try{
+            this.environment = environment
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            this.environment = previous
+        }
+    }
+
 
     // 表达式不同，语句不会产生值，因此visit方法的返回类型是`Void`，而不是`Object`。
 
@@ -181,6 +211,11 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     override fun visitPrintStmt(stmt: Stmt.Print) {
         val evaluate = evaluate(stmt.expression)
         println(stringify(evaluate))
+    }
+
+    override fun visitVarStmt(stmt: Stmt.Var) {
+        val value= evaluate(stmt.initializer)
+        environment.define(stmt.name.lexeme, value)
     }
 
 
