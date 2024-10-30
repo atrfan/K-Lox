@@ -3,7 +3,7 @@ import kotlin.test.Test
 
 class StatementsAndStateTest {
     @Test
-    fun statementsTest(){
+    fun statementsTest() {
         val string = "print \"one\";\n" +
                 "print true;\n" +
                 "print 2 + 1;"
@@ -13,7 +13,8 @@ class StatementsAndStateTest {
     @Test
     fun variableDeclarationTest(){
         val string = "var a = \"global a\";\n" +
-                "var b = \"global b\";\n" +
+                "var b ;\n" +
+                "b =  \"global b\" ;\n" +
                 "var c = \"global c\";\n" +
                 "{\n" +
                 "  var a = \"outer a\";\n" +

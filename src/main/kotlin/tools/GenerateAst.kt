@@ -12,7 +12,7 @@ object GenerateAst {
 //            System.exit(64)
 //        }
 //        val outputDir = args[0]
-        val outputDir = "D:\\IDEA Project\\K-Lox\\src\\main\\kotlin\\language"
+        val outputDir = "E:\\IdeaProjects\\K-Lox\\src\\main\\kotlin\\language"
         defineAst(
             outputDir, "Expr", listOf(
                 "Assign   ->  name:Token,value:Expr",       // 变量赋值
@@ -31,7 +31,7 @@ object GenerateAst {
                 "Expression      ->  expression:Expr",
                 "If         -> condition:Expr, thenBranch:Stmt, elseBranch:Stmt?    ",
                 "Print      ->  expression:Expr",
-                "Var        ->  name:Token, initializer:Expr",
+                "Var        ->  name:Token, initializer:Expr?",
                 "While      -> condition:Expr, body:Stmt"
             )
         )

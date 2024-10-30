@@ -1,7 +1,7 @@
 package language
 
 class Environment(
-    val enclosing: Environment? = null      // 对变量作用域嵌套的支持
+    private val enclosing: Environment? = null      // 对变量作用域嵌套的支持
 ) {
 
 

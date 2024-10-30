@@ -6,6 +6,7 @@ class LoopTest {
     fun test(){
         val string = "var a = 0;\n" +
                 "var temp;\n" +
+                "temp = 10;" +
                 "\n" +
                 "for (var b = 1; a < 10000; b = temp + b) {\n" +
                 "  print a;\n" +

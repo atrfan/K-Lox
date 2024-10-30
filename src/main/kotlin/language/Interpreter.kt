@@ -10,7 +10,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     fun interpret(statements: List<Stmt?>) {
         try {
             for (statement in statements) {
-                execute(statement!!)
+                execute(statement)
             }
         } catch (e: RuntimeError) {
             Lox.runtimeError(e)
@@ -172,8 +172,8 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
      * @param expr Expr
      * @return Any?
      */
-    private fun evaluate(expr: Expr): Any? {
-        return expr.accept(this)
+    private fun evaluate(expr: Expr?): Any? {
+        return expr?.accept(this)
     }
 
     /**

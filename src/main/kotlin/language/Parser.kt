@@ -45,7 +45,7 @@ class Parser(private val tokens: List<Token>) {
             initializer = expression()
         }
         consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
-        return Stmt.Var(name!!, initializer!!)
+        return Stmt.Var(name!!, initializer)
     }
 
 
@@ -186,7 +186,7 @@ class Parser(private val tokens: List<Token>) {
     private fun expressionStatement(): Stmt {
         val value: Expr = expression()
         consume(TokenType.SEMICOLON, "Expect ';' after value.")
-        return Stmt.Print(value)
+        return Stmt.Expression(value)
     }
 
     /**
