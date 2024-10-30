@@ -1,5 +1,7 @@
 package language
 
+import language.Stmt.While
+
 /**
  * 将tokens解析为expression
  * 规则如下
@@ -52,7 +54,7 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun assignment(): Expr {
-        val expr = equality()
+        val expr = or()
         if (match(TokenType.EQUAL)) {
             val equals = previous()
             val value = assignment()
@@ -66,20 +68,113 @@ class Parser(private val tokens: List<Token>) {
         return expr
     }
 
+    private fun or(): Expr {
+        var expr = and()
+        while(match(TokenType.OR)){
+            val operator = previous()
+            val right = and()
+            expr = Expr.Logical(expr, operator, right)
+        }
+        return expr
+    }
+
+    private fun and(): Expr {
+        var expr = equality()
+        while(match(TokenType.AND)){
+            val operator = previous()
+            val right = equality()
+            expr = Expr.Logical(expr, operator, right)
+        }
+        return expr
+    }
+
     /**
      * 我们通过查看当前标记来确定匹配哪条语句规则。`print`标记意味着它显然是一个`print`语句。
      * @return Stmt
      */
     private fun statement(): Stmt {
+        if(match(TokenType.FOR)){
+            return forStatement()
+        }
+
+        if(match(TokenType.IF)){
+            return ifStatement()
+        }
+
         if (match(TokenType.PRINT)) {
             return printStatement()
+        }
+        
+        if(match(TokenType.WHILE)){
+            return whileStatement()
         }
 
         if(match(TokenType.LEFT_BRACE)){        // 通过块的前缀标记(在本例中是`{`)来检测块的开始
             return Stmt.Block(block())
         }
 
-        return exceptionStatement()
+        return expressionStatement()
+    }
+
+    private fun forStatement(): Stmt {
+        consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
+        var initializer:Stmt? = null        // for 循环的第一个项，变量初始化
+        // 有三种情况：1.检测到的是';",表示空；2.变量声明；3.表达式
+        if(match(TokenType.SEMICOLON)){
+            initializer = null
+        } else if (match(TokenType.VAR)){
+            initializer = varDeclaration()
+        } else {
+            initializer = expressionStatement()
+        }
+
+        // 判断部分
+        var condition:Expr? = null
+        if(!check(TokenType.SEMICOLON)){
+            condition = expression()
+        }
+        consume(TokenType.SEMICOLON, "Expect ';' after loop condition.")
+
+        var increment:Expr? = null
+        if(!check(TokenType.RIGHT_PAREN)){
+            increment = expression()
+        }
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after increment.")
+
+        var body = statement()
+        if(increment != null){
+            body = Stmt.Block(listOf(body, Stmt.Expression(increment)))
+        }
+        if(condition == null){  // 条件为空，默认为true
+            condition = Expr.Literal(true)
+        }
+        body = Stmt.While(condition, body)
+        if(initializer != null){        // 初始化语句不为空，则将其作为初始化语句放入块中
+            body = Stmt.Block(listOf(initializer, body))
+        }
+        return body
+    }
+
+    private fun whileStatement(): Stmt {
+        consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.")
+        val condition = expression()
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.")
+        val body = statement()
+
+        return While(condition, body)
+    }
+
+    private fun ifStatement(): Stmt {
+        consume(TokenType.LEFT_PAREN,"Except '(' after 'if'.")
+        val condition = expression()
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.")
+
+        val thenBranch = statement()
+        var elseBranch: Stmt? = null
+        if(match(TokenType.ELSE)){
+            elseBranch = statement()
+        }
+        return Stmt.If(condition, thenBranch, elseBranch)
     }
 
     private fun printStatement(): Stmt {
@@ -88,7 +183,7 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Print(value)
     }
 
-    private fun exceptionStatement(): Stmt {
+    private fun expressionStatement(): Stmt {
         val value: Expr = expression()
         consume(TokenType.SEMICOLON, "Expect ';' after value.")
         return Stmt.Print(value)

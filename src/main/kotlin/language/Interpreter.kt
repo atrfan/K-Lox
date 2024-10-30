@@ -57,6 +57,22 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     }
 
     /**
+     * 计算 逻辑表达式 结果
+     * 我们先计算左操作数。然后我们查看结果值，判断是否可以短路。当且仅当不能短路时，我们才计算右侧的操作数。
+     * @param expr Variable
+     * @return Any?
+     */
+    override fun visitLogicalExpr(expr: Expr.Logical): Any? {
+        val left = evaluate(expr.left)
+        if(expr.operator.type == TokenType.OR){
+            if(isTruthy(left)) return left
+        } else{
+            if(!isTruthy(left)) return left
+        }
+        return evaluate(expr.right)
+    }
+
+    /**
      * 一元表达式
      * @param expr Unary
      * @return Any?
@@ -208,6 +224,10 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         evaluate(stmt.expression)
     }
 
+    override fun visitIfStmt(stmt: Stmt.If): Unit? {
+        TODO("Not yet implemented")
+    }
+
     override fun visitPrintStmt(stmt: Stmt.Print) {
         val evaluate = evaluate(stmt.expression)
         println(stringify(evaluate))
@@ -216,6 +236,12 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     override fun visitVarStmt(stmt: Stmt.Var) {
         val value= evaluate(stmt.initializer)
         environment.define(stmt.name.lexeme, value)
+    }
+
+    override fun visitWhileStmt(stmt: Stmt.While) {
+        while(isTruthy(evaluate(stmt.condition))){
+            execute(stmt.body)
+        }
     }
 
 
