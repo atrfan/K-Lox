@@ -30,12 +30,36 @@ class Parser(private val tokens: List<Token>) {
 
     private fun declaration(): Stmt? {
         try {
+            if (match(TokenType.FUN)) return function("function")
             if (match(TokenType.VAR)) return varDeclaration()
             return statement()
         } catch (error: ParseError) {
             synchronize()
             return null
         }
+    }
+
+    /**
+     *
+     * @param kind String       表示是函数还是类中的method，
+     * @return Stmt.Expression
+     */
+    private fun function(kind: String): Stmt.Function {
+        val name = consume(TokenType.IDENTIFIER, "Expect function name.")
+        consume(TokenType.LEFT_PAREN, "Expect '(' after ${kind} name.")
+        val parameters: MutableList<Token?> = mutableListOf()
+        if (!check(TokenType.RIGHT_PAREN)) {
+            do {
+                if (parameters.size >= 255) {
+                    error(peek(), "Can't have more than 255 parameters.")
+                }
+                parameters.add(consume(TokenType.IDENTIFIER, "Expect parameter name."))
+            } while (match(TokenType.COMMA))
+        }
+        consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
+        consume(TokenType.LEFT_BRACE, "Expect '{' before ${kind} body.")
+        val body = block()
+        return Stmt.Function(name!!, parameters, body)
     }
 
     private fun varDeclaration(): Stmt {
@@ -70,7 +94,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun or(): Expr {
         var expr = and()
-        while(match(TokenType.OR)){
+        while (match(TokenType.OR)) {
             val operator = previous()
             val right = and()
             expr = Expr.Logical(expr, operator, right)
@@ -80,7 +104,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun and(): Expr {
         var expr = equality()
-        while(match(TokenType.AND)){
+        while (match(TokenType.AND)) {
             val operator = previous()
             val right = equality()
             expr = Expr.Logical(expr, operator, right)
@@ -93,63 +117,74 @@ class Parser(private val tokens: List<Token>) {
      * @return Stmt
      */
     private fun statement(): Stmt {
-        if(match(TokenType.FOR)){
+        if (match(TokenType.FOR)) {
             return forStatement()
         }
 
-        if(match(TokenType.IF)){
+        if (match(TokenType.IF)) {
             return ifStatement()
         }
 
         if (match(TokenType.PRINT)) {
             return printStatement()
         }
-        
-        if(match(TokenType.WHILE)){
+
+        if(match(TokenType.RETURN)){
+            return returnStatement()
+        }
+
+        if (match(TokenType.WHILE)) {
             return whileStatement()
         }
 
-        if(match(TokenType.LEFT_BRACE)){        // 通过块的前缀标记(在本例中是`{`)来检测块的开始
+        if (match(TokenType.LEFT_BRACE)) {        // 通过块的前缀标记(在本例中是`{`)来检测块的开始
             return Stmt.Block(block())
         }
 
         return expressionStatement()
     }
 
+    private fun returnStatement(): Stmt {
+        val keyword = previous()
+        val value = if (check(TokenType.SEMICOLON)) null else expression()
+        consume(TokenType.SEMICOLON, "Expect ';' after return value.")
+        return Stmt.Return(keyword, value)
+    }
+
     private fun forStatement(): Stmt {
         consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
-        var initializer:Stmt? = null        // for 循环的第一个项，变量初始化
+        var initializer: Stmt? = null        // for 循环的第一个项，变量初始化
         // 有三种情况：1.检测到的是';",表示空；2.变量声明；3.表达式
-        if(match(TokenType.SEMICOLON)){
+        if (match(TokenType.SEMICOLON)) {
             initializer = null
-        } else if (match(TokenType.VAR)){
+        } else if (match(TokenType.VAR)) {
             initializer = varDeclaration()
         } else {
             initializer = expressionStatement()
         }
 
         // 判断部分
-        var condition:Expr? = null
-        if(!check(TokenType.SEMICOLON)){
+        var condition: Expr? = null
+        if (!check(TokenType.SEMICOLON)) {
             condition = expression()
         }
         consume(TokenType.SEMICOLON, "Expect ';' after loop condition.")
 
-        var increment:Expr? = null
-        if(!check(TokenType.RIGHT_PAREN)){
+        var increment: Expr? = null
+        if (!check(TokenType.RIGHT_PAREN)) {
             increment = expression()
         }
         consume(TokenType.RIGHT_PAREN, "Expect ')' after increment.")
 
         var body = statement()
-        if(increment != null){
+        if (increment != null) {
             body = Stmt.Block(listOf(body, Stmt.Expression(increment)))
         }
-        if(condition == null){  // 条件为空，默认为true
+        if (condition == null) {  // 条件为空，默认为true
             condition = Expr.Literal(true)
         }
         body = Stmt.While(condition, body)
-        if(initializer != null){        // 初始化语句不为空，则将其作为初始化语句放入块中
+        if (initializer != null) {        // 初始化语句不为空，则将其作为初始化语句放入块中
             body = Stmt.Block(listOf(initializer, body))
         }
         return body
@@ -165,13 +200,13 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun ifStatement(): Stmt {
-        consume(TokenType.LEFT_PAREN,"Except '(' after 'if'.")
+        consume(TokenType.LEFT_PAREN, "Except '(' after 'if'.")
         val condition = expression()
         consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.")
 
         val thenBranch = statement()
         var elseBranch: Stmt? = null
-        if(match(TokenType.ELSE)){
+        if (match(TokenType.ELSE)) {
             elseBranch = statement()
         }
         return Stmt.If(condition, thenBranch, elseBranch)
@@ -195,9 +230,9 @@ class Parser(private val tokens: List<Token>) {
      * 注意，该循环还有一个明确的`isAtEnd()`检查。我们必须小心避免无限循环，即使在解析无效代码时也是如此。如果用户忘记了结尾的`}`，解析器需要保证不能被阻塞。
      * @return List<Stmt?>
      */
-    private fun block():List<Stmt?>{
+    private fun block(): List<Stmt?> {
         val statements = mutableListOf<Stmt?>()
-        while(!check(TokenType.RIGHT_BRACE) && !isAtEnd()){
+        while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
             statements.add(declaration())
         }
         consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
@@ -304,7 +339,39 @@ class Parser(private val tokens: List<Token>) {
             return Expr.Unary(operator, right)
         }
 
-        return primary()
+        return call()
+    }
+
+    /**
+     * 首先，我们解析一个基本表达式，即调用的左操作数。
+     * 然后，每次看到`(`，我们就调用`finishCall()`解析调用表达式，并使用之前解析出的表达式作为被调用者。
+     * 返回的表达式成为新的`expr`，我们循环检查其结果是否被调用。
+     * @return Expr
+     */
+    private fun call(): Expr {
+        var expr = primary()
+        while (true) {
+            if (match(TokenType.LEFT_PAREN)) {
+                expr = finishCall(expr)
+            } else {
+                break
+            }
+        }
+        return expr
+    }
+
+    private fun finishCall(callee: Expr): Expr {
+        val arguments = mutableListOf<Expr>()
+        if (!check(TokenType.RIGHT_PAREN)) {
+            do {
+                if (arguments.size >= 255) {      // 参数数量不能超过255。如果发现参数过多，这里的代码会*报告*一个错误，但是不会*抛出*该错误
+                    error(peek(), "Can't have more than 255 arguments.")
+                }
+                arguments.add(expression())
+            } while (match(TokenType.COMMA))
+        }
+        val paren = consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")!!
+        return Expr.Call(callee, paren, arguments)
     }
 
     private fun primary(): Expr {

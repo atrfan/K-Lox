@@ -17,6 +17,7 @@ object GenerateAst {
             outputDir, "Expr", listOf(
                 "Assign   ->  name:Token,value:Expr",       // 变量赋值
                 "Binary   ->  left:Expr,operator:Token, right:Expr",
+                "Call     -> callee:Expr,paren:Token,arguments:List<Expr>",
                 "Grouping ->  expression:Expr",
                 "Literal  ->  value:Any?",
                 "Logical  ->  left:Expr,operator: Token,right:Expr",
@@ -29,8 +30,10 @@ object GenerateAst {
             outputDir, "Stmt", listOf(
                 "Block      -> statements:List<Stmt?>",
                 "Expression      ->  expression:Expr",
+                "Function   -> name:Token, params:List<Token?>, body:List<Stmt?>",// 函数节点有一个名称、一个参数列表(参数的名称)，然后是函数主体。我们将函数主体存储为包含在花括号中的语句列表。
                 "If         -> condition:Expr, thenBranch:Stmt, elseBranch:Stmt?    ",
                 "Print      ->  expression:Expr",
+                "Return     -> keyword:Token, value:Expr?    ",
                 "Var        ->  name:Token, initializer:Expr?",
                 "While      -> condition:Expr, body:Stmt"
             )

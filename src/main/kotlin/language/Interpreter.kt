@@ -2,7 +2,26 @@ package language
 
 class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
 
-    private var environment = Environment()
+    // 解释器中的`environment`字段会随着进入和退出局部作用域而改变，它会跟随当前环境。新加的`globals`字段则固定指向最外层的全局作用域。
+    val globals = Environment()
+    private var environment = globals
+
+    init {
+        // 定义一个自带的函数，用于获取当前时间戳，函数名为clock
+        globals.define("clock", object : LoxCallable {
+            override fun arity(): Int {     // 函数参数默认为0个
+                return 0
+            }
+
+            override fun call(interpreter: Interpreter, arguments: List<Any?>): Any {
+                return System.currentTimeMillis() / 1000.0
+            }
+
+            override fun toString(): String {
+                return "<native fn>"
+            }
+        })
+    }
 
     /**
      * 连接到解释器，然后解释表达式，最后返回结果
@@ -167,6 +186,20 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         }
     }
 
+    override fun visitCallExpr(expr: Expr.Call): Any? {
+        val callee = evaluate(expr.callee)
+        val arguments = expr.arguments.map { evaluate(it) }
+
+        if(callee !is LoxCallable){     // 如果被调用者无法被调用(例如“abc”()这种调用)，抛出异常
+            throw RuntimeError(expr.paren,"Can only call functions and classes.")
+        }
+        val function = callee as LoxCallable
+        if(arguments.size != function.arity()){
+            throw RuntimeError(expr.paren,"Expected ${function.arity()} arguments but got ${arguments.size}.")
+        }
+        return function.call(this, arguments)
+    }
+
     /**
      * 将表达式发送回解释器的访问者实现中
      * @param expr Expr
@@ -197,7 +230,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
     }
 
     private fun checkNumberOperands(operator: Token, left: Any?, right: Any?) {
-        if ((left is Double) && (right is Boolean)) return
+        if ((left is Double) && (right is Double)) return
         throw RuntimeError(operator, "Operand must be a number.")
     }
 
@@ -205,7 +238,7 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         executeBlock(stmt.statements,Environment(environment))
     }
 
-    private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+    fun executeBlock(statements: List<Stmt?>, environment: Environment){
         val previous = this.environment
         try{
             this.environment = environment
@@ -224,13 +257,28 @@ class Interpreter : Expr.Visitor<Any>, Stmt.Visitor<Unit> {
         evaluate(stmt.expression)
     }
 
-    override fun visitIfStmt(stmt: Stmt.If): Unit? {
-        TODO("Not yet implemented")
+    override fun visitFunctionStmt(stmt: Stmt.Function): Unit? {
+        val function = LoxFunction(stmt,environment)
+        environment.define(stmt.name.lexeme, function)
+        return null
+    }
+
+    override fun visitIfStmt(stmt: Stmt.If) {
+        if(isTruthy(evaluate(stmt.condition))){
+            execute(stmt.thenBranch)
+        } else {
+            execute(stmt.elseBranch)
+        }
     }
 
     override fun visitPrintStmt(stmt: Stmt.Print) {
         val evaluate = evaluate(stmt.expression)
         println(stringify(evaluate))
+    }
+
+    override fun visitReturnStmt(stmt: Stmt.Return): Unit? {
+        val value = if(stmt.value != null) evaluate(stmt.value) else null
+        throw Return(value)
     }
 
     override fun visitVarStmt(stmt: Stmt.Var) {
